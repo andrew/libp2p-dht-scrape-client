@@ -3,13 +3,14 @@ const fetch = require('node-fetch')
 const toIterable = require('stream-to-it')
 const ndjson = require('iterable-ndjson')
 const log = require('log-update')
+const fs = require('fs')
 
 async function main () {
   let dataPoints = 0
   const peers = new Map() // peerID -> { peerID, addresses, agentVersion, protocols }
   const versions = new Map() // agentVersion -> count
 
-  const res = await fetch('http://dht.scrape.stream/peers')
+  const res = await fetch('http://51.158.108.61:3000/peers')
   if (!res.ok) {
     throw new Error('not ok!')
   }
@@ -33,9 +34,14 @@ async function main () {
     log(`Data points: ${dataPoints}
 Unique peers: ${peers.size}
 Versions:
-${stortedVersions.slice(0, 10).map(([k, v]) => `  ${v}x ${k}`).join('\n')}
-  ...and ${stortedVersions.slice(10).length} more
+${stortedVersions.slice(0, 20).map(([k, v]) => `  ${v}x ${k}`).join('\n')}
+  ...and ${stortedVersions.slice(20).length} more
 `)
+
+    if(peers.size % 100 == 0){
+      fs.writeFile('output.json', JSON.stringify(Object.fromEntries(peers)), 'utf8', function(){});
+    }
+
   }
 }
 
@@ -49,7 +55,10 @@ function mergePeerData (p0 = {}, p1 = {}) {
 }
 
 function mergeStringArrays (a0 = [], a1 = []) {
-  return a0.concat(a1.filter(s => a0.includes(s)))
+  if(a1 === null){
+    return a0;
+  }
+  return [...new Set(a0.concat(a1))]
 }
 
 main().catch(console.error)
