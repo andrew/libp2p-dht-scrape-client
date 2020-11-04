@@ -3,14 +3,12 @@ const fetch = require('node-fetch')
 const toIterable = require('stream-to-it')
 const ndjson = require('iterable-ndjson')
 const log = require('log-update')
-const fs = require('fs')
 
 async function main () {
   let dataPoints = 0
-  const peers = new Map() // peerID -> { peerID, addresses, agentVersion, protocols }
-  const versions = new Map() // agentVersion -> count
+  let peers = new Map() // peerID -> { peerID, addresses, agentVersion, protocols }
 
-  const res = await fetch('http://51.158.108.61:3000/peers')
+  const res = await fetch('http://dht.scrape.stream/peers')
   if (!res.ok) {
     throw new Error('not ok!')
   }
@@ -19,29 +17,22 @@ async function main () {
 
   for await (const { peerID, addresses, agentVersion, protocols } of source) {
     dataPoints++
-    const peerData = peers.get(peerID)
 
-    if (agentVersion) {
-      if (!peerData || !peerData.agentVersion) {
-        versions.set(agentVersion, (versions.get(agentVersion) || 0) + 1)
-      }
-    }
+    const peerData = peers.get(peerID)
 
     peers.set(peerID, mergePeerData(peerData, { peerID, addresses, agentVersion, protocols }))
 
-    const stortedVersions = Array.from(versions).sort((a, b) => b[1] - a[1])
+    if(dataPoints % 500 == 0){
+      console.log(dataPoints)
+      fetch('http://51.158.108.61:5000/nodes/report', {
+              method: 'post',
+              body:    JSON.stringify({peers: Object.fromEntries(peers)}),
+              headers: { 'Content-Type': 'application/json' },
+          }).catch(err => console.error(err));
 
-    log(`Data points: ${dataPoints}
-Unique peers: ${peers.size}
-Versions:
-${stortedVersions.slice(0, 20).map(([k, v]) => `  ${v}x ${k}`).join('\n')}
-  ...and ${stortedVersions.slice(20).length} more
-`)
-
-    if(peers.size % 100 == 0){
-      fs.writeFile('output.json', JSON.stringify(Object.fromEntries(peers)), 'utf8', function(){});
+      peers = new Map()
+      dataPoints = 0
     }
-
   }
 }
 
