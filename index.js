@@ -24,7 +24,7 @@ async function main () {
 
     if(dataPoints % 500 == 0){
       console.log(dataPoints)
-      fetch('http://51.158.108.61:5000/nodes/report', {
+      fetch('http://dht.ecosystem-dashboard.com/nodes/report', {
               method: 'post',
               body:    JSON.stringify({peers: Object.fromEntries(peers)}),
               headers: { 'Content-Type': 'application/json' },
