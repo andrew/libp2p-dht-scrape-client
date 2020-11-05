@@ -24,8 +24,9 @@ async function main () {
 
     if(dataPoints % 500 == 0){
       console.log(dataPoints)
-      fetch('http://dht.ecosystem-dashboard.com/nodes/report', {
+      fetch('https://dht.ecosystem-dashboard.com/nodes/report', {
               method: 'post',
+              redirect: 'follow',
               body:    JSON.stringify({peers: Object.fromEntries(peers)}),
               headers: { 'Content-Type': 'application/json' },
           }).catch(err => console.error(err));
